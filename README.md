@@ -152,94 +152,101 @@ Save Notification                    │
 }
 ```
 
-Business Value
-This solution automates several time-consuming recruitment tasks:
+## 🚀 Business Value
 
-Resume collection and organization
+This workflow automates the early stages of the recruitment process, reducing manual work while ensuring applicants are handled consistently.
 
-Initial candidate screening and IT developer classification
+### Key Features
 
-Qualification assessment and structured resume parsing
+- 📥 Automatically collects resumes from incoming emails
+- 📄 Extracts and parses resume information from PDF files
+- 🤖 Uses AI to identify whether an applicant is an IT developer
+- 📊 Performs structured resume parsing for qualified candidates
+- 🔍 Detects duplicate applications using applicant records
+- 🚫 Prevents duplicate notification spam with one-time alerts
+- 📧 Automatically sends appropriate emails to applicants
+- ☁️ Archives resumes in Google Drive with shareable links
+- 📋 Maintains applicant records in Google Sheets
+- 👥 Notifies HR when a qualified IT candidate is received
 
-Duplicate application detection and prevention
+By leveraging AI-driven screening, recruiters can spend more time interviewing qualified candidates instead of manually reviewing every resume.
 
-One-time duplicate notification (no spam)
+---
 
-Applicant communication (4 email types)
+## 📧 Automated Email Workflow
 
-Resume archiving with searchable Google Drive links
+| Email Type | Recipient | Purpose |
+|------------|-----------|---------|
+| 🟢 Confirmation | Qualified IT Candidate | Confirms that the application has been received successfully |
+| ⚫ Rejection | Non-IT Candidate | Informs the applicant that their profile does not match current IT roles |
+| 🟠 Duplicate Notice | Duplicate Applicant | Sends a one-time notification for duplicate applications |
+| 🔵 HR Alert | HR Team | Notifies HR of a newly qualified candidate with resume and Drive link |
 
-Candidate record management in structured spreadsheets
+---
 
-By leveraging AI-driven evaluation, recruiters can focus on interviewing qualified IT developers instead of manually reviewing every application.
+## 🛠️ Skills Demonstrated
 
-Email Automation
-Email Type	Recipient	Purpose
-Confirmation (Green)	IT Candidate	Application received confirmation
-Rejection (Dark)	Non-IT Candidate	Profile doesn't match IT roles
-Duplicate Notice (Orange)	Repeat Applicant	One-time notification - sent only once
-HR Alert (Blue)	HR Team	New qualified candidate summary with links
-Skills Demonstrated
-This project showcases:
+- Workflow Automation (28 n8n Nodes)
+- AI Integration using Groq LLM
+- Google Sheets API Integration
+- Google Drive API Integration
+- Gmail IMAP & SMTP Automation
+- PDF Resume Processing
+- Business Process Automation
+- Conditional Logic Design (4 IF Nodes)
+- Structured Data Management
+- Duplicate Detection & Validation
+- One-Time Notification System
+- HTML Email Template Design
+- OAuth 2.0 Authentication
+- AI-Powered Recruitment Automation
 
-Workflow Automation (28 nodes)
+---
 
-AI Integration (3 Groq API calls)
+## ⚙️ Setup Instructions
 
-API Integration (Google Sheets, Drive, Gmail)
+### 1. Import the Workflow
 
-Business Process Automation
+Import **`Resume Automation.json`** into your n8n instance.
 
-PDF Document Processing
+### 2. Configure Environment Variables
 
-Conditional Logic Design (4 IF nodes)
+Replace all placeholder values:
 
-Data Management (3 Google Sheets tabs)
+- `YOUR_GROQ_API_KEY`
+- `YOUR_EMAIL@gmail.com`
+- `YOUR_HREMAIL@gmail.com`
+- `YOUR_SHEET_ID`
+- `YOUR_DRIVE_FOLDER_ID`
 
-Cloud Service Integration (OAuth 2.0)
+### 3. Configure Credentials
 
-Recruitment Process Automation
+Create and connect the following credentials in n8n:
 
-Duplicate Detection Logic
+- Gmail IMAP
+- Gmail SMTP
+- Google Sheets OAuth2
+- Google Drive OAuth2
 
-One-Time Notification System
+### 4. Prepare Google Services
 
-Professional Email Design (HTML/CSS)
+Create a Google Sheet with the following tabs:
 
-Setup Instructions
-Import Resume Automation.json into n8n
+- Accepted
+- Rejected
+- Duplicate Notified
 
-Replace all YOUR_* placeholders:
+Create a Google Drive folder where resumes will be stored.
 
-YOUR_GROQ_API_KEY - Get from console.groq.com
+### 5. Activate the Workflow
 
-YOUR_EMAIL@gmail.com - Your Gmail address
+Once credentials and resources are configured, enable the workflow and begin receiving applications automatically.
 
-YOUR_HREMAIL@gmail.com - HR/Recruitment email
+---
 
-YOUR_SHEET_ID - Google Sheet ID
+## 👨‍💻 Author
 
-YOUR_DRIVE_FOLDER_ID - Google Drive folder ID
+**Kairy Ken Magno**
 
-Configure credentials in n8n:
-
-IMAP (Gmail)
-
-SMTP (Gmail)
-
-Google Sheets OAuth2
-
-Google Drive OAuth2
-
-Create Google Sheet with tabs: Accepted, Rejected, Duplicate Notified
-
-Create Google Drive folder for resume storage
-
-Activate the workflow
-
-Author
-Kairy Ken Magno
-
-IT Graduate | AI Automation Enthusiast | Full-Stack Developer
-
+*IT Graduate • AI Automation Enthusiast • Full-Stack Developer*
 This project was developed as part of my portfolio to demonstrate practical applications of AI, workflow automation, and business process optimization using modern cloud technologies.
