@@ -20,6 +20,7 @@ The system receives resumes through email, extracts and analyzes PDF content usi
 - End-to-end workflow automation with no manual intervention
 
 ## System Workflow
+```text
 Candidate Sends Resume (Email + PDF)
                 │
                 ▼
@@ -103,7 +104,7 @@ Save Notification                    │
                            ▼                     ▼
 
                 Send Confirmation Email     Notify HR
-
+```
 
 ## Technology Stack
 
