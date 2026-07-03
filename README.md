@@ -24,113 +24,88 @@ CANDIDATE SENDS RESUME (Email with PDF Attachment)
           │
           ▼
 📧 EMAIL TRIGGER (IMAP)
-Watches Gmail inbox for new emails
           │
           ▼
 📄 EXTRACT FROM FILE (PDF)
-Extracts text content from PDF resume
           │
           ▼
 🔧 MINI PARSE PROMPT
-Creates AI prompt to extract name & email
           │
           ▼
 🌐 MINI PARSE GROQ
-Calls Groq API for initial extraction
           │
           ▼
 🔧 MINI PARSE EXTRACT
-Parses Groq response into clean JSON
-Output: { full_name, email }
+{ full_name, email }
           │
           ▼
 📊 READ ACCEPTED SHEET
-Reads all qualified candidates from Google Sheets
           │
           ▼
 📊 READ REJECTED SHEET
-Reads all rejected candidates from Google Sheets
           │
           ▼
 🔧 COMBINE SHEETS
-Merges Accepted + Rejected data together
           │
           ▼
 🔧 CHECK DUPLICATE
-Checks if email already exists in either sheet
-Output: { is_duplicate, resume_email }
+{ is_duplicate, resume_email }
           │
           ▼
-🔀 IF NEW APPLICANT
-is_duplicate == false?
+🔀 IF NEW APPLICANT?
           │
      ┌────┴────┐
      ▼         ▼
-❌ DUPLICATE   ✅ NEW APPLICANT
+❌ DUPLICATE   ✅ NEW
      │         │
      ▼         ▼
 📊 READ       🔧 IT FILTER PROMPT
-NOTIFIED      Creates AI prompt to classify
-SHEET         IT Developer vs Non-IT
-     │         │
-     ▼         ▼
-🔧 CHECK      🌐 IT FILTER GROQ
-NOTIFIED      Calls Groq API for classification
-     │         │
-     ▼         ▼
-🔀 IF NOT YET 🔧 IT FILTER EXTRACT
-NOTIFIED      Parses: { is_it_developer, reason }
-     │         │
-┌────┴────┐    ▼
-▼         ▼    🔀 IF IT DEVELOPER
-ALREADY   NOT  is_it_developer?
-NOTIFIED  YET       │
-(STOP)    │    ┌────┴────┐
+NOTIFIED      │
+SHEET         ▼
+     │        🌐 IT FILTER GROQ
+     ▼         │
+🔧 CHECK      ▼
+NOTIFIED      🔧 IT FILTER EXTRACT
+     │        { is_it_developer, reason }
+     ▼         │
+🔀 NOT          ▼
+NOTIFIED?      🔀 IF IT DEVELOPER?
+     │              │
+┌────┴────┐    ┌────┴────┐
+▼         ▼    ▼         ▼
+ALREADY   NOT  NON-IT   IT DEV
+(STOP)    │    │         │
           │    ▼         ▼
-          │  NON-IT   IT DEVELOPER
+          │  📊 SAVE    🔧 RESUME
+          │  REJECTED   PARSE PROMPT
           │    │         │
           │    ▼         ▼
-          │ 📊 SAVE TO  🔧 RESUME PARSE
-          │ REJECTED    PROMPT
-          │ SHEET       │
-          │    │         ▼
-          │    ▼       🌐 RESUME PARSE
-          │ ✉️ REJECTION GROQ
-          │ EMAIL       │
-          │             ▼
-          │           🔧 RESUME PARSE
-          │           EXTRACT
-          │           Output: full_name, email,
-          │           phone, skills, experience,
-          │           education, linkedin_url,
-          │           github_url, current_role
-          │             │
-          │             ▼
-          │           🔧 ADD BINARY
-          │           Gets PDF from Email Trigger
-          │             │
-          │             ▼
-          │           📂 UPLOAD TO DRIVE
-          │           Saves PDF to Resumes folder
-          │             │
-          │             ▼
-          │           🔧 DRIVE LINK
-          │           Gets shareable Drive URL
-          │             │
-          │             ▼
-          │           📊 SAVE TO ACCEPTED
-          │           Appends to Google Sheets
-          │             │
-          │        ┌────┴────┐
-          │        ▼         ▼
-          │   ✉️ CONFIRMATION  📧 HR NOTIFICATION
-          │   EMAIL (Green)    EMAIL (Blue)
-          │   "Application     Candidate summary
-          │   Received!"       with skills & links
+          │  ✉️ REJECT  🌐 RESUME
+          │  EMAIL      PARSE GROQ
+          │              │
+          │              ▼
+          │            🔧 RESUME
+          │            PARSE EXTRACT
+          │              │
+          │              ▼
+          │            🔧 ADD BINARY
+          │              │
+          │              ▼
+          │            📂 UPLOAD TO DRIVE
+          │              │
+          │              ▼
+          │            🔧 DRIVE LINK
+          │              │
+          │              ▼
+          │            📊 SAVE TO ACCEPTED
+          │              │
+          │         ┌────┴────┐
+          │         ▼         ▼
+          │    ✉️ CONFIRM   📧 HR
+          │    EMAIL        NOTIFY
           │
           ▼
      ✉️ DUPLICATE EMAIL
-     "Already Applied"
           │
           ▼
      🔧 NOTIFIED DATA
