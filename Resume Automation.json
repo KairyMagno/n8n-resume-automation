@@ -1,0 +1,1291 @@
+{
+  "name": "Resume Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "downloadAttachments": true,
+        "options": {
+          "customEmailConfig": "[\"UNSEEN\"]",
+          "forceReconnect": 1,
+          "trackLastMessageId": true
+        }
+      },
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2.1,
+      "position": [
+        -1088,
+        128
+      ],
+      "id": "74b79ac6-464d-4626-88ab-f0e24ad5169d",
+      "name": "Email Trigger (IMAP)",
+      "alwaysOutputData": false,
+      "credentials": {
+        "imap": {
+          "id": "yEpmc8d8ZDG88r7X",
+          "name": "IMAP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "attachment_0",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -864,
+        128
+      ],
+      "id": "45ccbf5c-30a1-40b1-a89c-e5ead52a6c87",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "jsCode": "const parsedData = $input.first().json;\nconst emailNode = $('Email Trigger (IMAP)').first();\n\nconst binaryData = {};\n\nif (emailNode.binary && emailNode.binary.attachment_0) {\n  binaryData.attachment_0 = emailNode.binary.attachment_0;\n}\n\nreturn {\n  json: parsedData,\n  binary: binaryData\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2720,
+        -64
+      ],
+      "id": "2146d35b-e8b3-4bf4-a4ef-86f1f30e8539",
+      "name": "Add Binary"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems = $input.all();\nconst miniParseNode = $('Mini Parse Extract').first();\nconst resumeEmail = miniParseNode.json.email;\n\nlet isDuplicate = false;\n\nfor (const item of allItems) {\n  const row = item.json;\n  if (row.Email === resumeEmail) {\n    isDuplicate = true;\n    break;\n  }\n}\n\nreturn {\n  is_duplicate: isDuplicate,\n  resume_email: resumeEmail\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        704,
+        128
+      ],
+      "id": "eb640e77-454d-4a26-9650-bc1cd26ca652",
+      "name": "Check Duplicate"
+    },
+    {
+      "parameters": {
+        "jsCode": "const resumeText = $input.first().json.text;\n\nconst payload = {\n  model: \"llama-3.1-8b-instant\",\n  messages: [\n    {\n      role: \"system\",\n      content: \"Extract full_name and email from this resume. Return ONLY a valid JSON object with no extra text, no comments, no explanations. Format: {\\\"full_name\\\": \\\"name\\\", \\\"email\\\": \\\"email\\\"}. If no email found, use empty string.\"\n    },\n    {\n      role: \"user\",\n      content: resumeText.substring(0, 1500)\n    }\n  ]\n};\n\nreturn payload;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -640,
+        128
+      ],
+      "id": "e200ad36-5843-4021-ae9a-07b5fb0c58cb",
+      "name": "Mini Parse Prompt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_GROQ_API_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -416,
+        128
+      ],
+      "id": "b18d423c-50b3-42a9-b3f1-91ee0ff24cc8",
+      "name": "Mini Parse Groq"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nlet rawText = response.choices[0].message.content;\n\n// Find the first complete JSON object by counting braces\nlet braceCount = 0;\nlet jsonStart = -1;\nlet jsonEnd = -1;\n\nfor (let i = 0; i < rawText.length; i++) {\n  if (rawText[i] === '{') {\n    if (braceCount === 0) jsonStart = i;\n    braceCount++;\n  }\n  if (rawText[i] === '}') {\n    braceCount--;\n    if (braceCount === 0) {\n      jsonEnd = i + 1;\n      break;\n    }\n  }\n}\n\nif (jsonStart !== -1 && jsonEnd !== -1) {\n  rawText = rawText.substring(jsonStart, jsonEnd);\n}\n\nrawText = rawText.replace(/```/g, '').replace(/json/g, '').trim();\n\nreturn JSON.parse(rawText);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -192,
+        128
+      ],
+      "id": "0af51afc-7506-4c7f-acad-e89c68991c51",
+      "name": "Mini Parse Extract"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "IT Developer Candidates",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Accepted",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        32,
+        128
+      ],
+      "id": "906d190c-e747-48f5-838a-b9ce0db1cb82",
+      "name": "Read Accepted Sheet",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "JhP787TpvbudG12A",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "IT Developer Candidates",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2124159775,
+          "mode": "list",
+          "cachedResultName": "Rejected",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=2124159775"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        256,
+        128
+      ],
+      "id": "c6aa19e2-edc6-4709-a65c-6291c1ac03ce",
+      "name": "Read Rejected Sheet",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "JhP787TpvbudG12A",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const acceptedItems = $('Read Accepted Sheet').first().json;\nconst rejectedItems = $input.first().json;\n\nlet allItems = [];\n\n// Add accepted rows\nif (Array.isArray(acceptedItems)) {\n  allItems = allItems.concat(acceptedItems);\n} else if (acceptedItems && acceptedItems.Email) {\n  allItems.push(acceptedItems);\n}\n\n// Add rejected rows\nif (Array.isArray(rejectedItems)) {\n  allItems = allItems.concat(rejectedItems);\n} else if (rejectedItems && rejectedItems.Email) {\n  allItems.push(rejectedItems);\n}\n\nreturn allItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        128
+      ],
+      "id": "c2d3eb63-44b2-4fc7-9c7d-334564e1bd33",
+      "name": "Combine Sheets",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e50ba54f-1b7a-4626-8a9f-b0384db24e6e",
+              "leftValue": "={{ $json.is_duplicate.toString() }}",
+              "rightValue": "false",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        928,
+        128
+      ],
+      "id": "8d6ccdde-cb2b-4472-a83d-4c97241ff279",
+      "name": "If New Applicant"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "IT Developer Candidates",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1319441711,
+          "mode": "list",
+          "cachedResultName": "Duplicate Notified",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=1319441711"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1152,
+        320
+      ],
+      "id": "f908efd3-ead7-4cc2-8ecd-9a0addd33731",
+      "name": "Read Notified Sheet",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "JhP787TpvbudG12A",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const dupCheck = $('Check Duplicate').first().json;\nconst allItems = $input.all();\n\nlet alreadyNotified = false;\n\nfor (const item of allItems) {\n  const row = item.json;\n  if (row.Email === dupCheck.resume_email) {\n    alreadyNotified = true;\n    break;\n  }\n}\n\nreturn {\n  already_notified: alreadyNotified,\n  resume_email: dupCheck.resume_email\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1376,
+        320
+      ],
+      "id": "aa0a4fae-e702-4b04-b1f2-341f7cb5b693",
+      "name": "Check Notified"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b6c141e3-8bae-45a8-86f6-d1f01282e1b8",
+              "leftValue": "={{ $json.already_notified.toString() }}",
+              "rightValue": "false",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1600,
+        320
+      ],
+      "id": "380556eb-ae4b-4602-a6b6-38c7dde84c23",
+      "name": "If Not Yet Notified"
+    },
+    {
+      "parameters": {
+        "fromEmail": "YOUR_EMAIL@gmail.com",
+        "toEmail": "={{ $('Email Trigger (IMAP)').first().json.from }}",
+        "subject": "Application Already Received",
+        "html": "<!DOCTYPE html>\n<html>\n<head>\n    <style>\n        body { font-family: Arial, sans-serif; color: #333; }\n        .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n        .header { background-color: #e67e22; padding: 20px; text-align: center; }\n        .header h2 { color: #ffffff; margin: 0; }\n        .content { padding: 30px 20px; background-color: #f9f9f9; border: 1px solid #ddd; }\n        .content p { font-size: 16px; line-height: 1.6; }\n        .footer { background-color: #2c3e50; padding: 15px; text-align: center; color: #ccc; font-size: 12px; }\n    </style>\n</head>\n<body>\n    <div class=\"container\">\n        <div class=\"header\">\n            <h2>Application Already Received</h2>\n        </div>\n        <div class=\"content\">\n            <p>Dear Candidate,</p>\n            <p>Our records show that you have already submitted an application. We have your resume on file and will contact you if your qualifications match our current openings.</p>\n            <p>No further action is needed at this time.</p>\n            <p>Best regards,<br><strong>DigInvent Recruitment Team</strong></p>\n        </div>\n        <div class=\"footer\">\n            <p>&copy; 2026 DigInvent. All rights reserved.</p>\n        </div>\n    </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1824,
+        320
+      ],
+      "id": "1202717b-31df-4b6c-a56c-cbb1fbdfa476",
+      "name": "Duplicate Email",
+      "webhookId": "c203ae7b-0ba0-4c36-b98d-85efc93bb545",
+      "credentials": {
+        "smtp": {
+          "id": "SIEiT0rYlNApbGF6",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const dupCheck = $('Check Duplicate').first().json;\nreturn {\n  email: dupCheck.resume_email,\n  date: new Date().toLocaleDateString()\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2048,
+        320
+      ],
+      "id": "488ffbd8-25ba-4aa6-ae1f-d8b3ed06ad83",
+      "name": "Notified Data"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "IT Developer Candidates",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1319441711,
+          "mode": "list",
+          "cachedResultName": "Duplicate Notified",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=1319441711"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{ $json.email }}",
+            "Date Notified": "={{ new Date().toLocaleDateString() }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date Notified",
+              "displayName": "Date Notified",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2272,
+        320
+      ],
+      "id": "9b9d291e-366b-4d50-89ba-df15e1587409",
+      "name": "Save Notified",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "JhP787TpvbudG12A",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const resumeText = $('Extract from File').first().json.text || $input.first().json.text || \"\";\n\nif (!resumeText || resumeText === \"undefined\") {\n  throw new Error(\"No resume text found. Make sure Extract from File node executed.\");\n}\n\nconst payload = {\n  model: \"llama-3.1-8b-instant\",\n  messages: [\n    {\n      role: \"system\",\n      content: \"You are a resume classifier. Determine if the resume belongs to an IT Developer.\\n\\nIT Developer = Software Developer, Web Developer, Mobile Developer, Backend/Frontend/Full Stack Developer, DevOps, Cloud Engineer, Data Engineer, QA Engineer, SDET, Game Developer.\\n\\nNOT IT Developer = IT Support, Help Desk, Network Admin, Project Manager, UI/UX Designer, Business Analyst, Teacher, Sales, ESL Tutor, Education roles.\\n\\nIf NOT an IT Developer, state the actual role found (e.g., Teacher, ESL Tutor, Sales Associate). If no clear role, state No IT experience found.\\n\\nRespond with ONLY valid JSON:\\n{\\\"is_it_developer\\\": true/false, \\\"reason\\\": \\\"Actual role found or reason for rejection\\\"}\"\n    },\n    {\n      role: \"user\",\n      content: \"Classify this resume:\\n\\n\" + resumeText\n    }\n  ]\n};\n\nreturn payload;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1152,
+        32
+      ],
+      "id": "78fa5e73-97cf-4494-8a6c-e83c6e1d34f4",
+      "name": "IT Filter Prompt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_GROQ_API_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1376,
+        32
+      ],
+      "id": "a5fef975-eb12-40b9-8f32-f7f354300692",
+      "name": "IT Filter Groq"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the raw response from Groq\nconst response = $input.first().json;\n\n// Groq returns the text inside choices[0].message.content\nlet rawText = response.choices[0].message.content;\n\n// Remove any markdown code blocks if present\nrawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();\n\n// Parse the JSON\nconst parsed = JSON.parse(rawText);\n\n// Return it as clean output\nreturn parsed;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        32
+      ],
+      "id": "1efab969-1e98-4ab4-869b-fc5300df3821",
+      "name": "IT Filter Extract"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a3b74a24-83aa-42ba-affe-3da5df315917",
+              "leftValue": "={{ $json.is_it_developer }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1824,
+        32
+      ],
+      "id": "b4222f9c-2215-44d5-89cf-f15fcf00481e",
+      "name": "If IT Developer"
+    },
+    {
+      "parameters": {
+        "jsCode": "const resumeText = $('Extract from File').first().json.text;\n\nconst payload = {\n  model: \"llama-3.1-8b-instant\",\n  messages: [\n    {\n      role: \"system\",\n      content: \"You are a professional resume parser. Extract the following information from the resume and return ONLY valid JSON, no extra text:\\n\\n- full_name\\n- email\\n- phone\\n- location\\n- linkedin_url\\n- github_url\\n- portfolio_url\\n- current_role (the most recent job title from work experience)\\n- summary (2-3 sentence professional summary)\\n- skills (array of technical skills only)\\n- work_experience (array of objects: company, title, start_date, end_date, description)\\n- education (array of objects: institution, degree, field_of_study, graduation_date)\\n- certifications (array of objects: name, issuer, date)\\n- languages (array)\\n- total_years_experience (number)\\n\\nIf information not found, use null for strings, empty arrays for lists.\"\n    },\n    {\n      role: \"user\",\n      content: \"Parse this IT Developer resume:\\n\\n\" + resumeText\n    }\n  ]\n};\n\nreturn payload;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2048,
+        -64
+      ],
+      "id": "1edb059d-837a-4e3a-8ecd-491b01089ab4",
+      "name": "Resume Parse Prompt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_GROQ_API_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2272,
+        -64
+      ],
+      "id": "565720af-378e-4845-abdd-fe3236187f71",
+      "name": "Resume Parse Groq"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nlet rawText = response.choices[0].message.content;\n\n// Clean markdown\nrawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();\n\n// Find JSON by counting braces\nlet braceCount = 0;\nlet jsonStart = -1;\nlet jsonEnd = -1;\n\nfor (let i = 0; i < rawText.length; i++) {\n  if (rawText[i] === '{') {\n    if (braceCount === 0) jsonStart = i;\n    braceCount++;\n  }\n  if (rawText[i] === '}') {\n    braceCount--;\n    if (braceCount === 0) {\n      jsonEnd = i + 1;\n      break;\n    }\n  }\n}\n\nif (jsonStart !== -1 && jsonEnd !== -1) {\n  rawText = rawText.substring(jsonStart, jsonEnd);\n}\n\nconst parsed = JSON.parse(rawText);\n\n// Flatten skills if it's an object\nif (parsed.skills && typeof parsed.skills === 'object' && !Array.isArray(parsed.skills)) {\n  parsed.skills = Object.values(parsed.skills);\n}\n\n// Placeholder - will be replaced with actual Drive link\nparsed.resume_link = \"DRIVE_LINK_PLACEHOLDER\";\n\nreturn parsed;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2496,
+        -64
+      ],
+      "id": "9db9e76e-c88f-45aa-8dba-3fc11cdbb20a",
+      "name": "Resume Parse Extract"
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "attachment_0",
+        "name": "={{ $('Resume Parse Extract').first().json.full_name }} - Resume.pdf",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "YOUR_DRIVE_FOLDER_ID",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2944,
+        -64
+      ],
+      "id": "91b8cc05-f18f-4ccd-a69e-f63c7ce5ff40",
+      "name": "Upload to Drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "tHQtidAWqsRJqDVq",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const driveOutput = $input.first().json;\nconst codeNode4Data = $('Resume Parse Extract').first().json;\n\n// Add the actual Drive link\ncodeNode4Data.resume_link = driveOutput.webViewLink || driveOutput.id || \"No link\";\n\nreturn codeNode4Data;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3168,
+        -64
+      ],
+      "id": "73ced91d-ac76-425f-823a-8a8d14580c74",
+      "name": "Drive Link"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "IT Developer Candidates",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $json.full_name }}",
+            "Email": "={{ $json.email }}",
+            "Phone": "={{ $json.phone }}",
+            "Role": "={{ $json.current_role || ($json.work_experience && $json.work_experience[0] ? $json.work_experience[0].title : 'N/A') }}",
+            "Skills": "={{ $json.skills.join(\", \") }}",
+            "Experience": "={{ $json.total_years_experience || 0 }}",
+            "Education": "={{ $json.education[0].degree }}",
+            "Resume Link": "={{ $json.resume_link }}",
+            "Date Applied": "={{ new Date().toLocaleDateString() }}",
+            "LinkedIn": "={{ $json.linkedin_url }}",
+            "GitHub": "={{ $json.github_url || $json.portfolio_url }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Role",
+              "displayName": "Role",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Skills",
+              "displayName": "Skills",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Experience",
+              "displayName": "Experience",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Education",
+              "displayName": "Education",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Resume Link",
+              "displayName": "Resume Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn",
+              "displayName": "LinkedIn",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "GitHub",
+              "displayName": "GitHub",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date Applied",
+              "displayName": "Date Applied",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3392,
+        -64
+      ],
+      "id": "bf1cc98f-0a54-44ff-84e1-6a6898845edc",
+      "name": "Save to Accepted",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "JhP787TpvbudG12A",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "IT Developer Candidates",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2124159775,
+          "mode": "list",
+          "cachedResultName": "Rejected",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=2124159775"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $('Mini Parse Extract').first().json.full_name }}",
+            "Email": "={{ $('Mini Parse Extract').first().json.email }}",
+            "Reason": "={{ $('IT Filter Extract').first().json.reason }}",
+            "Date Applied": "={{ new Date().toLocaleDateString() }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Reason",
+              "displayName": "Reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date Applied",
+              "displayName": "Date Applied",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2048,
+        128
+      ],
+      "id": "6aa88c3e-8024-4632-b1c2-20844ac83d26",
+      "name": "Save to Rejected",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "JhP787TpvbudG12A",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "YOUR_EMAIL@gmail.com",
+        "toEmail": "={{ $('Email Trigger (IMAP)').first().json.from }}",
+        "subject": "Regarding Your Application",
+        "html": "<!DOCTYPE html>\n<html>\n<head>\n    <style>\n        body { font-family: Arial, sans-serif; color: #333; }\n        .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n        .header { background-color: #2c3e50; padding: 20px; text-align: center; }\n        .header h2 { color: #ffffff; margin: 0; }\n        .content { padding: 30px 20px; background-color: #f9f9f9; border: 1px solid #ddd; }\n        .content p { font-size: 16px; line-height: 1.6; }\n        .footer { background-color: #2c3e50; padding: 15px; text-align: center; color: #ccc; font-size: 12px; }\n        .footer a { color: #ccc; }\n        .divider { border-top: 1px solid #ddd; margin: 20px 0; }\n    </style>\n</head>\n<body>\n    <div class=\"container\">\n        <div class=\"header\">\n            <h2>Application Update</h2>\n        </div>\n        <div class=\"content\">\n            <p>Dear Candidate,</p>\n            \n            <p>Thank you for your interest in joining our team. We have reviewed your application and unfortunately, your current profile does not match the IT Developer positions we are currently hiring for.</p>\n            \n            <p>We will keep your resume on file and reach out if a suitable opportunity arises in the future.</p>\n            \n            <p>We wish you the very best in your job search and future endeavors.</p>\n            \n            <p>Best regards,<br><strong>Recruitment Team</strong></p>\n        </div>\n        <div class=\"footer\">\n            <p>This is an automated response. Please do not reply to this email.</p>\n            <p>&copy; 2026 DigInvent. All rights reserved.</p>\n        </div>\n    </div>\n</body>\n</html>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        2272,
+        128
+      ],
+      "id": "3128cb41-0808-40d9-800d-9fb785b15018",
+      "name": "Rejection Email",
+      "webhookId": "ea8e3bbd-003d-4191-b3d0-2d14227898a4",
+      "credentials": {
+        "smtp": {
+          "id": "SIEiT0rYlNApbGF6",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "YOUR_EMAIL@gmail.com",
+        "toEmail": "={{ $('Email Trigger (IMAP)').first().json.from }}",
+        "subject": "Application Received",
+        "html": "<!DOCTYPE html>\n<html>\n<head>\n    <style>\n        body { font-family: Arial, sans-serif; color: #333; }\n        .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n        .header { background-color: #27ae60; padding: 20px; text-align: center; }\n        .header h2 { color: #ffffff; margin: 0; }\n        .content { padding: 30px 20px; background-color: #f9f9f9; border: 1px solid #ddd; }\n        .content p { font-size: 16px; line-height: 1.6; }\n        .footer { background-color: #2c3e50; padding: 15px; text-align: center; color: #ccc; font-size: 12px; }\n    </style>\n</head>\n<body>\n    <div class=\"container\">\n        <div class=\"header\">\n            <h2>Application Received!</h2>\n        </div>\n        <div class=\"content\">\n            <p>Dear Candidate,</p>\n            \n            <p>Thank you for applying for an IT Developer position at DigInvent. We have received your application and our team will review it shortly.</p>\n            \n            <p>If your qualifications match our requirements, we will reach out to schedule an interview within 5-7 business days.</p>\n            \n            <p>Best regards,<br><strong>DigInvent Recruitment Team</strong></p>\n        </div>\n        <div class=\"footer\">\n            <p>This is an automated confirmation. Please do not reply to this email.</p>\n            <p>&copy; 2026 DigInvent. All rights reserved.</p>\n        </div>\n    </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        3616,
+        32
+      ],
+      "id": "00b33a85-d3af-4c11-9e91-6b493a992950",
+      "name": "Confirmation Email",
+      "webhookId": "42a7a85c-ef12-454e-b3ce-5075eca75453",
+      "credentials": {
+        "smtp": {
+          "id": "SIEiT0rYlNApbGF6",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "YOUR_EMAIL@gmail.com",
+        "toEmail": "YOUR_HREMAIL@gmail.com",
+        "subject": "New IT Candidate",
+        "html": "=<!DOCTYPE html>\n<html>\n<head>\n    <style>\n        body { font-family: Arial, sans-serif; color: #333; }\n        .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n        .header { background-color: #2980b9; padding: 20px; text-align: center; }\n        .header h2 { color: #ffffff; margin: 0; }\n        .content { padding: 30px 20px; background-color: #f9f9f9; border: 1px solid #ddd; }\n        .content p { font-size: 15px; line-height: 1.6; }\n        .info-table { width: 100%; border-collapse: collapse; margin: 15px 0; }\n        .info-table td { padding: 8px 12px; border-bottom: 1px solid #ddd; }\n        .info-table td:first-child { font-weight: bold; width: 120px; color: #555; }\n        .footer { background-color: #2c3e50; padding: 15px; text-align: center; color: #ccc; font-size: 12px; }\n    </style>\n</head>\n<body>\n    <div class=\"container\">\n        <div class=\"header\">\n            <h2>🆕 New IT Developer Application</h2>\n        </div>\n        <div class=\"content\">\n            <table class=\"info-table\">\n                <tr><td>Name:</td><td>{{ $('Resume Parse Extract').first().json.full_name }}</td></tr>\n                <tr><td>Email:</td><td>{{ $('Resume Parse Extract').first().json.email }}</td></tr>\n                <tr><td>Phone:</td><td>{{ $('Resume Parse Extract').first().json.phone }}</td></tr>\n                <tr><td>Role:</td><td>{{ $('Resume Parse Extract').first().json.current_role }}</td></tr>\n                <tr><td>Experience:</td><td>{{ ($('Resume Parse Extract').first().json.total_years_experience || 0) + ' years' }}</td></tr>\n                <tr><td>Skills:</td><td>{{ $('Resume Parse Extract').first().json.skills.join(\", \") }}</td></tr>\n                <tr><td>LinkedIn:</td><td>{{ $('Resume Parse Extract').first().json.linkedin_url || 'N/A' }}</td></tr>\n                <tr><td>GitHub:</td><td>{{ $('Resume Parse Extract').first().json.github_url || $('Resume Parse Extract').first().json.portfolio_url || 'N/A' }}</td></tr>\n            </table>\n            \n            <p style=\"font-size: 13px; color: #888;\">Candidate has been added to the Google Sheet for full review.</p>\n        </div>\n        <div class=\"footer\">\n            <p>&copy; 2026 DigInvent Recruitment Automation</p>\n        </div>\n    </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        3616,
+        -160
+      ],
+      "id": "ed408a37-33ac-4016-a4f0-0c8fb4af50bc",
+      "name": "HR Notification",
+      "webhookId": "f08d8556-6f07-4894-9736-725e11c0c37b",
+      "credentials": {
+        "smtp": {
+          "id": "SIEiT0rYlNApbGF6",
+          "name": "SMTP account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Email Trigger (IMAP)": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Mini Parse Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Binary": {
+      "main": [
+        [
+          {
+            "node": "Upload to Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Duplicate": {
+      "main": [
+        [
+          {
+            "node": "If New Applicant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mini Parse Prompt": {
+      "main": [
+        [
+          {
+            "node": "Mini Parse Groq",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mini Parse Groq": {
+      "main": [
+        [
+          {
+            "node": "Mini Parse Extract",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mini Parse Extract": {
+      "main": [
+        [
+          {
+            "node": "Read Accepted Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Accepted Sheet": {
+      "main": [
+        [
+          {
+            "node": "Read Rejected Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Rejected Sheet": {
+      "main": [
+        [
+          {
+            "node": "Combine Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Sheets": {
+      "main": [
+        [
+          {
+            "node": "Check Duplicate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If New Applicant": {
+      "main": [
+        [
+          {
+            "node": "IT Filter Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Notified Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Notified Sheet": {
+      "main": [
+        [
+          {
+            "node": "Check Notified",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Notified": {
+      "main": [
+        [
+          {
+            "node": "If Not Yet Notified",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Not Yet Notified": {
+      "main": [
+        [
+          {
+            "node": "Duplicate Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Duplicate Email": {
+      "main": [
+        [
+          {
+            "node": "Notified Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notified Data": {
+      "main": [
+        [
+          {
+            "node": "Save Notified",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Notified": {
+      "main": [
+        []
+      ]
+    },
+    "IT Filter Prompt": {
+      "main": [
+        [
+          {
+            "node": "IT Filter Groq",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IT Filter Groq": {
+      "main": [
+        [
+          {
+            "node": "IT Filter Extract",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IT Filter Extract": {
+      "main": [
+        [
+          {
+            "node": "If IT Developer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If IT Developer": {
+      "main": [
+        [
+          {
+            "node": "Resume Parse Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save to Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resume Parse Prompt": {
+      "main": [
+        [
+          {
+            "node": "Resume Parse Groq",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resume Parse Groq": {
+      "main": [
+        [
+          {
+            "node": "Resume Parse Extract",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resume Parse Extract": {
+      "main": [
+        [
+          {
+            "node": "Add Binary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload to Drive": {
+      "main": [
+        [
+          {
+            "node": "Drive Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Drive Link": {
+      "main": [
+        [
+          {
+            "node": "Save to Accepted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Accepted": {
+      "main": [
+        [
+          {
+            "node": "HR Notification",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Confirmation Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Rejected": {
+      "main": [
+        [
+          {
+            "node": "Rejection Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rejection Email": {
+      "main": [
+        []
+      ]
+    },
+    "Confirmation Email": {
+      "main": [
+        []
+      ]
+    },
+    "HR Notification": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "Asia/Manila",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "f0007e42-71a2-43ed-807d-9b978cde8397",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8bb0bc469984c1d5bfbde09d885c507d58dc5b25c45a92edfba10f49af4417e3"
+  },
+  "nodeGroups": [],
+  "id": "rF9Az6iZM60GfAz6",
+  "tags": []
+}
