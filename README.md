@@ -20,115 +20,123 @@ The system receives resumes through email, extracts and analyzes PDF content usi
 - End-to-end workflow automation with no manual intervention
 
 ## System Workflow
-Candidate Sends Resume (Email with PDF Attachment)
-│
-▼
-📧 Email Trigger (IMAP)
+CANDIDATE SENDS RESUME (Email with PDF Attachment)
+          │
+          ▼
+📧 EMAIL TRIGGER (IMAP)
 Watches Gmail inbox for new emails
-│
-▼
-📄 Extract from File (PDF)
+          │
+          ▼
+📄 EXTRACT FROM FILE (PDF)
 Extracts text content from PDF resume
-│
-▼
-🔧 Mini Parse Prompt
+          │
+          ▼
+🔧 MINI PARSE PROMPT
 Creates AI prompt to extract name & email
-│
-▼
-🌐 Mini Parse Groq
+          │
+          ▼
+🌐 MINI PARSE GROQ
 Calls Groq API for initial extraction
-│
-▼
-🔧 Mini Parse Extract
+          │
+          ▼
+🔧 MINI PARSE EXTRACT
 Parses Groq response into clean JSON
 Output: { full_name, email }
-│
-▼
-📊 Read Accepted Sheet
+          │
+          ▼
+📊 READ ACCEPTED SHEET
 Reads all qualified candidates from Google Sheets
-│
-├──────────────────────┐
-▼ ▼
-📊 Read Rejected Sheet │
-Reads all rejected candidates│
-│ │
-└──────────┬───────────┘
-▼
-🔧 Combine Sheets
-Merges Accepted + Rejected data
-│
-▼
-🔧 Check Duplicate
-Checks if email already exists
+          │
+          ▼
+📊 READ REJECTED SHEET
+Reads all rejected candidates from Google Sheets
+          │
+          ▼
+🔧 COMBINE SHEETS
+Merges Accepted + Rejected data together
+          │
+          ▼
+🔧 CHECK DUPLICATE
+Checks if email already exists in either sheet
 Output: { is_duplicate, resume_email }
-│
-▼
-🔀 If New Applicant
+          │
+          ▼
+🔀 IF NEW APPLICANT
 is_duplicate == false?
-│
-┌───────────┼───────────┐
-▼ ▼
-❌ DUPLICATE ✅ NEW APPLICANT
-│ │
-▼ ▼
-📊 Read Notified Sheet 🔧 IT Filter Prompt
-(Duplicate Notified tab) Creates AI prompt to classify
-│ IT Developer vs Non-IT
-▼ │
-🔧 Check Notified ▼
-Checks if already sent 🌐 IT Filter Groq
-duplicate email Calls Groq API for classification
-│ │
-▼ ▼
-🔀 If Not Yet Notified 🔧 IT Filter Extract
-already_notified? Parses: { is_it_developer, reason }
-│ │
-┌────┴────┐ ▼
-▼ ▼ 🔀 If IT Developer
-Already Not Yet is_it_developer?
-Notified Notified │
-(STOP) │ ┌────┴────┐
-▼ ▼ ▼
-✉️ Duplicate NON-IT IT DEVELOPER
-Email │ │
-"Already ▼ ▼
-Applied" 📊 Save to 🔧 Resume Parse Prompt
-│ Rejected Creates full parse prompt
-▼ Sheet │
-🔧 Notified │ ▼
-Data ▼ 🌐 Resume Parse Groq
-│ ✉️ Rejection Calls Groq for full parse
-▼ Email │
-📊 Save to "Profile ▼
-Notified Not Match" 🔧 Resume Parse Extract
-Sheet Parses structured data:
-full_name, email, phone,
-skills, experience,
-education, linkedin_url,
-github_url, current_role
-│
-▼
-🔧 Add Binary
-Gets PDF from Email Trigger
-│
-▼
-📂 Upload to Drive
-Saves PDF to Resumes folder
-│
-▼
-🔧 Drive Link
-Gets shareable Drive URL
-│
-▼
-📊 Save to Accepted
-Appends to Google Sheets
-│
-┌────┴────┐
-▼ ▼
-✉️ Confirmation 📧 HR Notification
-Email (Green) Email (Blue)
-"Application Candidate summary
-Received!" with skills & links
+          │
+     ┌────┴────┐
+     ▼         ▼
+❌ DUPLICATE   ✅ NEW APPLICANT
+     │         │
+     ▼         ▼
+📊 READ       🔧 IT FILTER PROMPT
+NOTIFIED      Creates AI prompt to classify
+SHEET         IT Developer vs Non-IT
+     │         │
+     ▼         ▼
+🔧 CHECK      🌐 IT FILTER GROQ
+NOTIFIED      Calls Groq API for classification
+     │         │
+     ▼         ▼
+🔀 IF NOT YET 🔧 IT FILTER EXTRACT
+NOTIFIED      Parses: { is_it_developer, reason }
+     │         │
+┌────┴────┐    ▼
+▼         ▼    🔀 IF IT DEVELOPER
+ALREADY   NOT  is_it_developer?
+NOTIFIED  YET       │
+(STOP)    │    ┌────┴────┐
+          │    ▼         ▼
+          │  NON-IT   IT DEVELOPER
+          │    │         │
+          │    ▼         ▼
+          │ 📊 SAVE TO  🔧 RESUME PARSE
+          │ REJECTED    PROMPT
+          │ SHEET       │
+          │    │         ▼
+          │    ▼       🌐 RESUME PARSE
+          │ ✉️ REJECTION GROQ
+          │ EMAIL       │
+          │             ▼
+          │           🔧 RESUME PARSE
+          │           EXTRACT
+          │           Output: full_name, email,
+          │           phone, skills, experience,
+          │           education, linkedin_url,
+          │           github_url, current_role
+          │             │
+          │             ▼
+          │           🔧 ADD BINARY
+          │           Gets PDF from Email Trigger
+          │             │
+          │             ▼
+          │           📂 UPLOAD TO DRIVE
+          │           Saves PDF to Resumes folder
+          │             │
+          │             ▼
+          │           🔧 DRIVE LINK
+          │           Gets shareable Drive URL
+          │             │
+          │             ▼
+          │           📊 SAVE TO ACCEPTED
+          │           Appends to Google Sheets
+          │             │
+          │        ┌────┴────┐
+          │        ▼         ▼
+          │   ✉️ CONFIRMATION  📧 HR NOTIFICATION
+          │   EMAIL (Green)    EMAIL (Blue)
+          │   "Application     Candidate summary
+          │   Received!"       with skills & links
+          │
+          ▼
+     ✉️ DUPLICATE EMAIL
+     "Already Applied"
+          │
+          ▼
+     🔧 NOTIFIED DATA
+          │
+          ▼
+     📊 SAVE TO NOTIFIED
 
 
 ## Technology Stack
