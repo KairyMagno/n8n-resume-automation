@@ -1,2 +1,270 @@
-# n8n-resume-automation
-AI-powered resume screening automation using n8n, Groq, Google Sheets &amp; Gmail. Auto-classifies IT developers, parses resumes, saves to Drive, and sends professional emails.
+# AI Resume Analyzer & Candidate Screening System
+
+## Overview
+The **AI Resume Analyzer & Candidate Screening System** is an end-to-end recruitment automation solution built with **n8n** and **Groq AI (Llama 3.1)**. The workflow automates resume intake, candidate evaluation, IT developer classification, document management, and applicant communication, significantly reducing manual screening effort for recruiters.
+
+The system receives resumes through email, extracts and analyzes PDF content using AI, classifies candidates as IT Developers or non-IT roles, parses qualified resumes into structured data, generates hiring recommendations, and automatically routes applicants through the appropriate recruitment process.
+
+## Key Features
+- Automated resume submission via email
+- PDF resume extraction and text processing
+- AI-powered candidate evaluation using Groq (Llama 3.1)
+- Intelligent IT developer classification and filtering
+- Full resume parsing with structured data extraction
+- Duplicate detection across multiple submissions
+- One-time duplicate notification tracking
+- Candidate data storage in Google Sheets (Accepted, Rejected, Duplicate Notified)
+- Resume archiving in Google Drive with shareable links
+- Automated professional HTML email notifications (Confirmation, Rejection, Duplicate, HR Alert)
+- LinkedIn & GitHub profile extraction
+- End-to-end workflow automation with no manual intervention
+
+## System Workflow
+Candidate Sends Resume (Email with PDF Attachment)
+│
+▼
+📧 Email Trigger (IMAP)
+Watches Gmail inbox for new emails
+│
+▼
+📄 Extract from File (PDF)
+Extracts text content from PDF resume
+│
+▼
+🔧 Mini Parse Prompt
+Creates AI prompt to extract name & email
+│
+▼
+🌐 Mini Parse Groq
+Calls Groq API for initial extraction
+│
+▼
+🔧 Mini Parse Extract
+Parses Groq response into clean JSON
+Output: { full_name, email }
+│
+▼
+📊 Read Accepted Sheet
+Reads all qualified candidates from Google Sheets
+│
+├──────────────────────┐
+▼ ▼
+📊 Read Rejected Sheet │
+Reads all rejected candidates│
+│ │
+└──────────┬───────────┘
+▼
+🔧 Combine Sheets
+Merges Accepted + Rejected data
+│
+▼
+🔧 Check Duplicate
+Checks if email already exists
+Output: { is_duplicate, resume_email }
+│
+▼
+🔀 If New Applicant
+is_duplicate == false?
+│
+┌───────────┼───────────┐
+▼ ▼
+❌ DUPLICATE ✅ NEW APPLICANT
+│ │
+▼ ▼
+📊 Read Notified Sheet 🔧 IT Filter Prompt
+(Duplicate Notified tab) Creates AI prompt to classify
+│ IT Developer vs Non-IT
+▼ │
+🔧 Check Notified ▼
+Checks if already sent 🌐 IT Filter Groq
+duplicate email Calls Groq API for classification
+│ │
+▼ ▼
+🔀 If Not Yet Notified 🔧 IT Filter Extract
+already_notified? Parses: { is_it_developer, reason }
+│ │
+┌────┴────┐ ▼
+▼ ▼ 🔀 If IT Developer
+Already Not Yet is_it_developer?
+Notified Notified │
+(STOP) │ ┌────┴────┐
+▼ ▼ ▼
+✉️ Duplicate NON-IT IT DEVELOPER
+Email │ │
+"Already ▼ ▼
+Applied" 📊 Save to 🔧 Resume Parse Prompt
+│ Rejected Creates full parse prompt
+▼ Sheet │
+🔧 Notified │ ▼
+Data ▼ 🌐 Resume Parse Groq
+│ ✉️ Rejection Calls Groq for full parse
+▼ Email │
+📊 Save to "Profile ▼
+Notified Not Match" 🔧 Resume Parse Extract
+Sheet Parses structured data:
+full_name, email, phone,
+skills, experience,
+education, linkedin_url,
+github_url, current_role
+│
+▼
+🔧 Add Binary
+Gets PDF from Email Trigger
+│
+▼
+📂 Upload to Drive
+Saves PDF to Resumes folder
+│
+▼
+🔧 Drive Link
+Gets shareable Drive URL
+│
+▼
+📊 Save to Accepted
+Appends to Google Sheets
+│
+┌────┴────┐
+▼ ▼
+✉️ Confirmation 📧 HR Notification
+Email (Green) Email (Blue)
+"Application Candidate summary
+Received!" with skills & links
+
+
+## Technology Stack
+
+### Workflow Automation
+- n8n (Self-hosted Docker)
+
+### Artificial Intelligence
+- Groq API
+- Llama 3.1 (8B Instant)
+
+### Cloud Services
+- Gmail API (IMAP + SMTP)
+- Google Drive API
+- Google Sheets API
+
+### Data Processing
+- PDF Extraction
+- JSON Processing
+- JavaScript Expressions
+
+### Integration & Automation
+- REST APIs
+- Conditional Logic (Multi-branch IF nodes)
+- Email Automation (Professional HTML Templates)
+- Document Management
+
+## Google Sheets Structure
+
+### Accepted (Qualified IT Developers):
+| Name | Email | Phone | Role | Skills | Experience | Education | Resume Link | LinkedIn | GitHub | Date Applied |
+
+### Rejected (Non-IT Applicants):
+| Name | Email | Reason | Date Applied |
+
+### Duplicate Notified (One-time notification tracking):
+| Email | Date Notified |
+
+## AI Evaluation Structure
+
+### IT Developer Classification:
+```json
+{
+  "is_it_developer": true,
+  "reason": "..."
+}
+```
+
+Business Value
+This solution automates several time-consuming recruitment tasks:
+
+Resume collection and organization
+
+Initial candidate screening and IT developer classification
+
+Qualification assessment and structured resume parsing
+
+Duplicate application detection and prevention
+
+One-time duplicate notification (no spam)
+
+Applicant communication (4 email types)
+
+Resume archiving with searchable Google Drive links
+
+Candidate record management in structured spreadsheets
+
+By leveraging AI-driven evaluation, recruiters can focus on interviewing qualified IT developers instead of manually reviewing every application.
+
+Email Automation
+Email Type	Recipient	Purpose
+Confirmation (Green)	IT Candidate	Application received confirmation
+Rejection (Dark)	Non-IT Candidate	Profile doesn't match IT roles
+Duplicate Notice (Orange)	Repeat Applicant	One-time notification - sent only once
+HR Alert (Blue)	HR Team	New qualified candidate summary with links
+Skills Demonstrated
+This project showcases:
+
+Workflow Automation (28 nodes)
+
+AI Integration (3 Groq API calls)
+
+API Integration (Google Sheets, Drive, Gmail)
+
+Business Process Automation
+
+PDF Document Processing
+
+Conditional Logic Design (4 IF nodes)
+
+Data Management (3 Google Sheets tabs)
+
+Cloud Service Integration (OAuth 2.0)
+
+Recruitment Process Automation
+
+Duplicate Detection Logic
+
+One-Time Notification System
+
+Professional Email Design (HTML/CSS)
+
+Setup Instructions
+Import Resume Automation.json into n8n
+
+Replace all YOUR_* placeholders:
+
+YOUR_GROQ_API_KEY - Get from console.groq.com
+
+YOUR_EMAIL@gmail.com - Your Gmail address
+
+YOUR_HREMAIL@gmail.com - HR/Recruitment email
+
+YOUR_SHEET_ID - Google Sheet ID
+
+YOUR_DRIVE_FOLDER_ID - Google Drive folder ID
+
+Configure credentials in n8n:
+
+IMAP (Gmail)
+
+SMTP (Gmail)
+
+Google Sheets OAuth2
+
+Google Drive OAuth2
+
+Create Google Sheet with tabs: Accepted, Rejected, Duplicate Notified
+
+Create Google Drive folder for resume storage
+
+Activate the workflow
+
+Author
+Kairy Ken Magno
+
+IT Graduate | AI Automation Enthusiast | Full-Stack Developer
+
+This project was developed as part of my portfolio to demonstrate practical applications of AI, workflow automation, and business process optimization using modern cloud technologies.
