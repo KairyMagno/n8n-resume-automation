@@ -20,98 +20,89 @@ The system receives resumes through email, extracts and analyzes PDF content usi
 - End-to-end workflow automation with no manual intervention
 
 ## System Workflow
-CANDIDATE SENDS RESUME (Email with PDF Attachment)
-          │
-          ▼
-📧 EMAIL TRIGGER (IMAP)
-          │
-          ▼
-📄 EXTRACT FROM FILE (PDF)
-          │
-          ▼
-🔧 MINI PARSE PROMPT
-          │
-          ▼
-🌐 MINI PARSE GROQ
-          │
-          ▼
-🔧 MINI PARSE EXTRACT
-{ full_name, email }
-          │
-          ▼
-📊 READ ACCEPTED SHEET
-          │
-          ▼
-📊 READ REJECTED SHEET
-          │
-          ▼
-🔧 COMBINE SHEETS
-          │
-          ▼
-🔧 CHECK DUPLICATE
-{ is_duplicate, resume_email }
-          │
-          ▼
-🔀 IF NEW APPLICANT?
-          │
-     ┌────┴────┐
-     ▼         ▼
-❌ DUPLICATE   ✅ NEW
-     │         │
-     ▼         ▼
-📊 READ       🔧 IT FILTER PROMPT
-NOTIFIED      │
-SHEET         ▼
-     │        🌐 IT FILTER GROQ
-     ▼         │
-🔧 CHECK      ▼
-NOTIFIED      🔧 IT FILTER EXTRACT
-     │        { is_it_developer, reason }
-     ▼         │
-🔀 NOT          ▼
-NOTIFIED?      🔀 IF IT DEVELOPER?
-     │              │
-┌────┴────┐    ┌────┴────┐
-▼         ▼    ▼         ▼
-ALREADY   NOT  NON-IT   IT DEV
-(STOP)    │    │         │
-          │    ▼         ▼
-          │  📊 SAVE    🔧 RESUME
-          │  REJECTED   PARSE PROMPT
-          │    │         │
-          │    ▼         ▼
-          │  ✉️ REJECT  🌐 RESUME
-          │  EMAIL      PARSE GROQ
-          │              │
-          │              ▼
-          │            🔧 RESUME
-          │            PARSE EXTRACT
-          │              │
-          │              ▼
-          │            🔧 ADD BINARY
-          │              │
-          │              ▼
-          │            📂 UPLOAD TO DRIVE
-          │              │
-          │              ▼
-          │            🔧 DRIVE LINK
-          │              │
-          │              ▼
-          │            📊 SAVE TO ACCEPTED
-          │              │
-          │         ┌────┴────┐
-          │         ▼         ▼
-          │    ✉️ CONFIRM   📧 HR
-          │    EMAIL        NOTIFY
-          │
-          ▼
-     ✉️ DUPLICATE EMAIL
-          │
-          ▼
-     🔧 NOTIFIED DATA
-          │
-          ▼
-     📊 SAVE TO NOTIFIED
+Candidate Sends Resume (Email + PDF)
+                │
+                ▼
+           IMAP Trigger
+                │
+                ▼
+      PDF Text Extraction
+                │
+                ▼
+      Mini Parse (Groq AI)
+                │
+                ▼
+ Extract Basic Information
+ (Full Name, Email Address)
+                │
+                ▼
+ Read Accepted Applicants
+                │
+                ▼
+ Read Rejected Applicants
+                │
+                ▼
+   Combine Applicant Lists
+                │
+                ▼
+      Duplicate Check
+                │
+                ▼
+           Decision Logic
+        ┌───────────────┐
+        │   IF Node     │
+        └──────┬────────┘
+               │
+      ┌────────┴─────────┐
+      ▼                  ▼
+
+ Duplicate            New Applicant
+      │                  │
+      ▼                  ▼
+Read Notified      IT Filter (Groq AI)
+Applicants               │
+      │                  ▼
+      │          Determine if Resume
+      │         Matches IT Developer
+      │                  │
+      │                  ▼
+      │            Decision Logic
+      │         ┌───────────────┐
+      │         │   IF Node     │
+      │         └──────┬────────┘
+      │                │
+      │      ┌─────────┴──────────┐
+      │      ▼                    ▼
+
+Already Notified          Non-IT Developer
+      │                          │
+      ▼                          ▼
+     End                  Save to Rejected
+                                  │
+                                  ▼
+                          Send Rejection Email
+
+Not Yet Notified                  IT Developer
+      │                                │
+      ▼                                ▼
+Send Duplicate              Resume Parsing (Groq AI)
+Application Email                    │
+      │                               ▼
+      ▼                      Attach PDF Binary
+Save Notification                    │
+      │                               ▼
+      ▼                     Upload to Google Drive
+     End                              │
+                                      ▼
+                              Generate Drive Link
+                                      │
+                                      ▼
+                           Save to Accepted Sheet
+                                      │
+                           ┌──────────┴──────────┐
+                           ▼                     ▼
+
+                Send Confirmation Email     Notify HR
 
 
 ## Technology Stack
